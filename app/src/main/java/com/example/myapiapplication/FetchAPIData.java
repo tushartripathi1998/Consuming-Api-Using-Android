@@ -1,5 +1,7 @@
 package com.example.myapiapplication;
 
+import android.content.Context;
+import android.content.res.AssetManager;
 import android.os.AsyncTask;
 
 import org.json.JSONArray;
@@ -12,38 +14,42 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Properties;
 
 import javax.net.ssl.HttpsURLConnection;
 
-public class fetchData extends AsyncTask<Void, Void, Void> {
-    String data = "";
-    String dataParsed = "";
+public class FetchAPIData extends AsyncTask<Void, Void, Void> {
+    StringBuilder data = new StringBuilder();
+    StringBuilder dataParsed;
     String singleParsed = "";
+    Context context;
 
+
+    public FetchAPIData(Context context){
+        this.context = context;
+    }
     @Override
     protected Void doInBackground(Void... voids) {
 
         try {
-            URL url = new URL("https://api.myjson.com/bins/xuykl");
+            URL url = new URL(getConfigProperty("api.url"));
             HttpsURLConnection httpsURLConnection = (HttpsURLConnection)url.openConnection(); //connection
             InputStream inputStream = httpsURLConnection.getInputStream(); //to get streamed input
             BufferedReader bufferedReader= new BufferedReader(new InputStreamReader(inputStream));
             String line = "";
+            data = new StringBuilder();
+            dataParsed = new StringBuilder();
 
             while(line != null){
                 line = bufferedReader.readLine();
-                data = data+line;
+                data.append(line);
             }
 
-            JSONArray jsonArray = new JSONArray(data);
+            JSONArray jsonArray = new JSONArray(data.toString());
             for(int i=0;i<jsonArray.length();i++){
                 JSONObject jsonObject = (JSONObject)jsonArray.get(i);
-                singleParsed = "Name:" + jsonObject.get("name")+"\n"+
-                               "Password:" + jsonObject.get("password")+"\n"+
-                               "Contact:" + jsonObject.get("contact")+"\n"+
-                               "Country:" + jsonObject.get("country")+"\n";
-
-                dataParsed = dataParsed + singleParsed;
+                singleParsed = jsonObject.toString(2);
+                dataParsed.append(singleParsed);
             }
         } catch (MalformedURLException e) {
             e.printStackTrace();
@@ -60,5 +66,22 @@ public class fetchData extends AsyncTask<Void, Void, Void> {
     protected void onPostExecute(Void aVoid) {  //on ui work, and showing the data
         super.onPostExecute(aVoid);
         MainActivity.data.setText(dataParsed);
+    }
+
+    /**
+     * Helper to yield property details
+     * @param propKey the supplied key value
+     * @return Property value present in the app.properties file
+     */
+    private String getConfigProperty(String propKey){
+        Properties properties = new Properties();
+        AssetManager assetManager = context.getAssets();
+        try {
+            InputStream inputStream = assetManager.open("app.properties");
+            properties.load(inputStream);
+            return properties.getProperty(propKey);
+        }catch(IOException ex){
+            return "";
+        }
     }
 }
